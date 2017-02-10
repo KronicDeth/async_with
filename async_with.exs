@@ -11,6 +11,7 @@ defmodule Thing do
     {weths, _lefts} =
       Enum.map_reduce(weths, [], fn(weth, acc) ->
         {lefts, rights, expr} = weth
+        rights = Enum.uniq(rights)
         rights = Enum.filter(rights, &(&1 in acc))
         {{lefts, rights, expr}, lefts ++ acc}
       end)
@@ -67,14 +68,14 @@ defmodule Thing do
       tasks = unquote(Macro.escape tasks_tuple)
       unquote_splicing(asts)
       for task <- Tuple.to_list(tasks) do
-        send(task.pid, {:tasks, tasks})
+        send(task |> elem(1), {:tasks, tasks})
       end
     end
   end
 
   def task_ast(index, right_vars, clause, sends, left_vars) do
     quote do
-      tasks = put_elem(tasks, unquote(index), Task.async fn ->
+      tasks = put_elem(tasks, unquote(index), Task.start fn ->
         tasks = receive do
           {:tasks, tasks} -> tasks
         end
@@ -92,6 +93,12 @@ defmodule Thing do
              unquote(clause) do
           unquote(task_sends(sends))
           unquote(collector_sends(left_vars))
+        else
+          val ->
+            send(collector.pid, {:abort, val})
+            Task.start fn ->
+              unquote(tasks_send_abort())
+            end
         end
       end)
     end
@@ -100,7 +107,7 @@ defmodule Thing do
   def right_vars_with_clauses(rights) do
     for {name, index} <- rights do
       quote do
-        unquote(Macro.var(name, nil)) <- elem(return, unquote(index))
+        unquote(Macro.var(name, nil)) = elem(return, unquote(index))
       end
     end
   end
@@ -126,11 +133,19 @@ defmodule Thing do
     end
   end
 
-  defp task_sends(sends) do
+  def tasks_send_abort do
+    quote do
+      Enum.map Tuple.to_list(tasks), fn(task) ->
+        elem(task, 1) |> Process.exit(:with_abort)
+      end
+    end
+  end
+
+  def task_sends(sends) do
     Enum.map sends, fn({var_index, var_name, task_index}) ->
       quote do
         IO.inspect tasks
-        send(elem(tasks, unquote(task_index)).pid,
+        send(elem(tasks, unquote(task_index)) |> elem(1),
           {unquote(var_index), unquote(Macro.var(var_name, nil))})
       end
     end
@@ -178,7 +193,7 @@ defmodule Thing do
     ast = {:{}, [], vars_asts}
     IO.inspect ast
     quote do
-      unquote(ast) = Task.await(collector, 30_000)
+      unquote(ast) <- Task.await(collector, 30_000)
     end
   end
 
@@ -277,18 +292,22 @@ end
 defmodule OtherThing do
   require Thing
 
-  def sleep_5(), do: :timer.sleep(5_000)
+  # def sleep_5(), do: :timer.sleep(5_000)
+  def sleep_5(), do: :ok
 
-  def myfunc() do
-    Thing.async with a <- sleep_5(),
-                     b <- 3,
-                     # c <- 2,
-                     c <- b + 2,
-                     d <- IO.puts("d has run") && 9,
-                     e <- 6 + d + b,
-                     a <- 7 do
-      # {c, d, a}
-      {a,b,c,d,e}
+  def myfunc(a \\ 1) do
+    Thing.async with a <- a,
+                     a <- a + a do
+                      # a <- sleep_5(),
+                      # {1, b} <- {3, 456},
+                      # {1, c} <- {2, 123},
+                      # # c <- b + 2,
+                      # d <- IO.puts("d has run") && 9,
+                      # e <- b,
+                      # a <- 7 do
+                      # {c, d, a}
+                      # {a,b,c,d,e}
+             a
     end
   end
 end
