@@ -33,6 +33,23 @@ defmodule AsyncWith do
       ...> end
       {:error, :reason}
 
+  `else` clauses for error handling still works with `async`
+
+      iex> require AsyncWith
+      iex> import AsyncWith
+      iex> async with {:ok, a} <- {:error, :reason} do
+      ...>   a
+      ...> else
+      ...>   {:error, reason} -> reason
+      ...> end
+      :reason
+      iex> with {:ok, a} <- {:error, :reason} do
+      ...>   a
+      ...> else
+      ...>   {:error, reason} -> reason
+      ...> end
+      :reason
+
   """
   defmacro async(expr, do: block), do: do_async(expr, block)
 
