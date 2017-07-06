@@ -1,4 +1,4 @@
-defmodule Thing do
+defmodule AsyncWith do
   defmacro async(expr, do: block) do
     IO.inspect expr
     thing(expr, block)
@@ -290,13 +290,13 @@ defmodule Thing do
 end
 
 defmodule OtherThing do
-  require Thing
+  require AsyncWith
 
   # def sleep_5(), do: :timer.sleep(5_000)
   def sleep_5(), do: :ok
 
   def myfunc(a \\ 1) do
-    Thing.async with a <- a,
+    AsyncWith.async with a <- a,
                      a <- a + a do
                       # a <- sleep_5(),
                       # {1, b} <- {3, 456},
