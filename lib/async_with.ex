@@ -1,6 +1,39 @@
 defmodule AsyncWith do
   # Macros
 
+  @moduledoc """
+  ## Literals
+
+  Literals execute immediately, but still spawn a `Task`, so they will be much slower than a literal in a normal with
+
+      iex> require AsyncWith
+      iex> import AsyncWith
+      iex> async with {:ok, a} <- {:ok, 5} do
+      ...>   a
+      ...> end
+      5
+      iex> with {:ok, a} <- {:ok, 5} do
+      ...>   a
+      ...> end
+      5
+
+  ## Errors
+
+  A match error will be returned, like normal `with`, but it will still require a `Task` to produce the value, so it
+  will be slower than a normal `with`.
+
+      iex> require AsyncWith
+      iex> import AsyncWith
+      iex> async with {:ok, a} <- {:error, :reason} do
+      ...>   a
+      ...> end
+      {:error, :reason}
+      iex> with {:ok, a} <- {:error, :reason} do
+      ...>   a
+      ...> end
+      {:error, :reason}
+
+  """
   defmacro async(expr, do: block), do: do_async(expr, block)
 
   # Functions
