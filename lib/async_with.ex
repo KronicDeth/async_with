@@ -81,12 +81,7 @@ defmodule AsyncWith do
     quote do
       unquote(col_ast)
       unquote(t_ast)
-      # send(collector.pid, {0, 0})
-      # send(collector.pid, {1, 1})
-      # send(collector.pid, {2, 2})
-      # send(collector.pid, {3, 3})
-      # send(collector.pid, {4, 4})
-      # send(collector.pid, {5, 5})
+
       with unquote(collector_assignment(vars)) do
         unquote(block)
       end
