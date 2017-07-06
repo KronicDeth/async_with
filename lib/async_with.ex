@@ -8,7 +8,6 @@ defmodule AsyncWith do
   ## Private Functions
 
   defp clean_vars(vars, replace \\ nil) do
-    IO.puts "clean_vars"
     vars
     |> Enum.map_reduce([], fn(var = {name, index}, acc) ->
       case name in acc do
@@ -37,7 +36,6 @@ defmodule AsyncWith do
   defp collector_ast(vars) do
     quote do
       collector = Task.async fn ->
-        IO.puts "running"
         loop = fn(state, fun) ->
           new_state = receive(do: unquote(receive_lines(vars)))
           case new_state do
