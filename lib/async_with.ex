@@ -1,6 +1,5 @@
 defmodule AsyncWith do
   defmacro async(expr, do: block) do
-    IO.inspect expr
     thing(expr, block)
   end
 
@@ -25,11 +24,8 @@ defmodule AsyncWith do
         current_lefts = lefts ++ current_lefts
         {{lefts, rights, expr}, {index, current_lefts}}
       end)
-    IO.inspect weths
     col_ast = collector_ast(vars)
     t_ast = tasks_ast(weths)
-    IO.inspect col_ast
-    IO.inspect t_ast
     quote do
       unquote(col_ast)
       unquote(t_ast)
@@ -46,7 +42,6 @@ defmodule AsyncWith do
   end
 
   defp tasks_ast(weths = [{_lefts, _rights, _expr}|_rest]) do
-    IO.inspect weths
     tasks_tuple = 1..(length(weths)) |> Enum.to_list |> List.to_tuple
 
     asts = for {{lefts, rights, expr}, index} <- Enum.with_index(weths) do
@@ -144,7 +139,6 @@ defmodule AsyncWith do
   def task_sends(sends) do
     Enum.map sends, fn({var_index, var_name, task_index}) ->
       quote do
-        IO.inspect tasks
         send(elem(tasks, unquote(task_index)) |> elem(1),
           {unquote(var_index), unquote(Macro.var(var_name, nil))})
       end
@@ -157,7 +151,6 @@ defmodule AsyncWith do
         IO.puts "running"
         loop = fn(state, fun) ->
           new_state = receive(do: unquote(receive_lines(vars)))
-          IO.inspect new_state
           case new_state do
             unquote(state_match_line(vars))
           end
@@ -169,7 +162,6 @@ defmodule AsyncWith do
 
   defp clean_vars(vars, replace \\ nil) do
     IO.puts "clean_vars"
-    IO.inspect vars
     vars
     |> Enum.map_reduce([], fn(var = {name, index}, acc) ->
       case name in acc do
@@ -178,7 +170,6 @@ defmodule AsyncWith do
       end
     end)
     |> elem(0)
-    |> IO.inspect
   end
 
   def collector_assignment(vars) do
@@ -191,7 +182,6 @@ defmodule AsyncWith do
 
     vars_asts = for var <- cleaned_vars, do: Macro.var(var, nil)
     ast = {:{}, [], vars_asts}
-    IO.inspect ast
     quote do
       unquote(ast) <- Task.await(collector, 30_000)
     end
@@ -241,14 +231,11 @@ defmodule AsyncWith do
 
     cleaned_vars =
       clean_vars(vars)
-      |> IO.inspect
       |> Enum.reduce(nothing, fn({var, index}, acc) ->
       List.replace_at(acc, index, var)
     end)
-    |> IO.inspect
 
     oks_vars = for var <- cleaned_vars, do: {:ok, Macro.var(var, nil)}
-    IO.inspect oks_vars
     oks = {:{}, [], oks_vars}
     vars_tuple = {:{}, [], vars_ast}
 
